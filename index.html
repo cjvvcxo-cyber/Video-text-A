@@ -120,8 +120,7 @@
       const model=$('modelChoice').value,audio=await decodeAudio(file);
       if(!transcriber||loadedModel!==model){setStatus('Downloading or loading the speech model…',18);transcriber=await pipeline('automatic-speech-recognition',model,{progress_callback:item=>{if(item.status==='progress'&&Number.isFinite(item.progress))setStatus(`Loading speech model: ${Math.round(item.progress)}%`,18+item.progress*.25)}});loadedModel=model}
       setStatus('Transcribing spoken audio…',48);const output=await transcriber(audio,{chunk_length_s:30,stride_length_s:5,return_timestamps:true});const chunks=output.chunks||[];if(!chunks.length)return (output.text||'').trim();
-      return chunks.map(chunk=>{const t=chunk.timestamp||[0,0];return `[${formatTime(t[0])} - ${formatTime(t[1])}] ${String(chunk.text||'').trim()}`}).join('
-');
+      return chunks.map(chunk=>{const t=chunk.timestamp||[0,0];return `[${formatTime(t[0])} - ${formatTime(t[1])}] ${String(chunk.text||'').trim()}`}).join('\n');
     }
     function seekVideo(time){return new Promise(resolve=>{if(Math.abs(video.currentTime-time)<.01){resolve();return}video.addEventListener('seeked',resolve,{once:true});video.currentTime=Math.min(time,Math.max(0,video.duration-.05))})}
     const textKey=text=>text.toLowerCase().replace(/[^a-z0-9]+/g,'');
@@ -130,8 +129,7 @@
       if(!Number.isFinite(video.duration))await waitFor(video,'loadedmetadata');const interval=Math.max(1,Math.min(15,Number($('scanInterval').value)||3));const total=Math.max(1,Math.ceil(video.duration/interval));
       setStatus('Loading the OCR model…',60);const worker=await createWorker('eng',1,{logger:m=>{if(m.status==='recognizing text')setStatus('Reading visible text…',62+(m.progress||0)*8)}});
       const context=canvas.getContext('2d',{willReadFrequently:true}),width=Math.min(1280,video.videoWidth||1280),ratio=width/(video.videoWidth||width);canvas.width=width;canvas.height=Math.round((video.videoHeight||720)*ratio);const found=[],seen=new Set();
-      try{for(let i=0;i<total;i++){const time=Math.max(0,Math.min(i*interval,video.duration-.05));await seekVideo(time);context.drawImage(video,0,0,canvas.width,canvas.height);const result=await worker.recognize(canvas);const text=String(result.data.text||'').replace(/\s+/g,' ').trim(),key=textKey(text);if(key.length>=4&&!seen.has(key)){seen.add(key);found.push(`[${formatTime(time)}] ${text}`)}setStatus(`Scanning frame ${i+1} of ${total}…`,70+((i+1)/total)*26)}}finally{await worker.terminate()}return found.join('
-');
+      try{for(let i=0;i<total;i++){const time=Math.max(0,Math.min(i*interval,video.duration-.05));await seekVideo(time);context.drawImage(video,0,0,canvas.width,canvas.height);const result=await worker.recognize(canvas);const text=String(result.data.text||'').replace(/\s+/g,' ').trim(),key=textKey(text);if(key.length>=4&&!seen.has(key)){seen.add(key);found.push(`[${formatTime(time)}] ${text}`)}setStatus(`Scanning frame ${i+1} of ${total}…`,70+((i+1)/total)*26)}}finally{await worker.terminate()}return found.join('\n');
     }
     function showResults(){results.combined=`SPOKEN AUDIO
 ============
